@@ -155,7 +155,62 @@ void memoryDisplay(state* s){
     }
 }
 
+void saveIntoFile(state* s){
+    printf("Please Enter <source-address> <target-location> <length>\n");
+    char input[10000];
+    fgets(input, sizeof(input), stdin);
+    int sourceAddress;
+    int targetLocation;
+    int length;
+    sscanf(input, "%x %x %i", &sourceAddress, &targetLocation, &length);
 
+    if (isDebug(s)) {
+        if (s->displayMode)
+            printf("length = %X, units= %X from memory, starting at address %X to the file %s, starting from offset %X\n",
+                   length, s->unit_size, sourceAddress, s->file_name, targetLocation);
+        else
+            printf("length = %d, units = %d from memory, starting at address %d to the file %s, starting from offset %d\n",
+                   length, s->unit_size, sourceAddress, s->file_name, targetLocation);
+    }
+
+    void* ptr;
+    if(sourceAddress == 0)
+        ptr = &(s->mem_buf);
+    else
+        ptr = &sourceAddress;
+
+    FILE* f = fopen(s->file_name,"r+");
+    if(f != NULL){
+        fseek(f, targetLocation, SEEK_SET);
+        if(ftell(f) == targetLocation) {
+            fwrite(ptr, 1, s->unit_size * length, f);
+        }
+        else
+            printf("ERROR: target location: %X is out of bound for file: %s", targetLocation, s->file_name);
+        fclose(f);
+    }else{
+        printf("ERROR:CANT OPEN FILE: %s", s->file_name);
+    }
+}
+
+void memoryModify(state* s){
+    printf("Please Enter <location> <val>\n");
+    char input[10000];
+    fgets(input, sizeof(input), stdin);
+    int location;
+    int val;
+    sscanf(input, "%x %x", &location, &val);
+
+    if(isDebug(s)){
+        if(s->displayMode)
+            printf("Location: %X Length: %X\n", location, val);
+        else
+            printf("Location: %X Length: %i\n", location, val);
+    }
+
+    if(location < sizeof(s->mem_buf))
+        memcpy(&s->mem_buf[location], &val, s->unit_size);
+}
 
 
 
@@ -167,7 +222,7 @@ int main(int argc, char** argv){
     state* myState = calloc(1,sizeof (state));
     funDesc funcs[9] = {{"Toggle Debug Mode", &toggleDebugMode},{"Set File Name", &setFileName}, {"Set Unit Size", &setUnitSize},
                          {"Load Into Memory", &loadToMemory},{"Toggle Display Mode", &toggleDisplayMode},{"Memory Display", &memoryDisplay},
-                         {"Save Into File", &notImplemented}, {"Memory Modify", &notImplemented},{"Quit", &quit}};
+                         {"Save Into File", &saveIntoFile}, {"Memory Modify", &memoryModify},{"Quit", &quit}};
     while(1){
         if(myState->debug_mode == '1') {
             if(myState->displayMode)
